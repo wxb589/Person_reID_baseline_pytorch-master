@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/Person_reID_baseline_pytorch-master.iml" filepath="$PROJECT_DIR$/.idea/Person_reID_baseline_pytorch-master.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../论文/Re-id/Unsupervised Person Re-identification via Softened Similarity Learning/softened-similarity-learning-master/.idea/softened-similarity-learning-master.iml" filepath="$PROJECT_DIR$/../../论文/Re-id/Unsupervised Person Re-identification via Softened Similarity Learning/softened-similarity-learning-master/.idea/softened-similarity-learning-master.iml" />
+    </modules>
+  </component>
+</project>
