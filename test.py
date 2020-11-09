@@ -143,7 +143,7 @@ def load_network(network):
 # Extract feature from  a trained model.
 #
 def fliplr(img):
-    '''flip horizontal'''
+    """flip horizontal"""
     inv_idx = torch.arange(img.size(3) - 1, -1, -1).long()  # N x C x H x W
     img_flip = img.index_select(3, inv_idx)
     return img_flip
@@ -162,7 +162,7 @@ def extract_feature(model, dataloaders):
             ff = torch.FloatTensor(n, 2048, 6).zero_().cuda()  # we have six parts
 
         for i in range(2):
-            if (i == 1):
+            if i == 1:
                 img = fliplr(img)
             input_img = Variable(img.cuda())
             for scale in ms:
