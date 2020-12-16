@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from __future__ import print_function, division
 
 import argparse
@@ -21,6 +19,7 @@ from random_erasing import RandomErasing
 import yaml
 import math
 from shutil import copyfile
+from tqdm import tqdm
 
 matplotlib.use('agg')
 
@@ -39,18 +38,19 @@ parser = argparse.ArgumentParser(description='Training')
 parser.add_argument('--gpu_ids', default='0', type=str, help='gpu_ids: e.g. 0  0,1,2  0,2')
 parser.add_argument('--name', default='ft_ResNet50', type=str, help='output model name')
 parser.add_argument('--data_dir', default='D:\\文件\\研究生\\dataset\\market1501\\pytorch', type=str, help='training dir path')
-parser.add_argument('--train_all', action='store_true', help='use all training data')
-parser.add_argument('--color_jitter', action='store_true', help='use color jitter in training')
-parser.add_argument('--batchsize', default=32, type=int, help='batchsize')
+parser.add_argument('--train_all', default=True, help='use all training data')
+parser.add_argument('--color_jitter', default=False, help='use color jitter in training')
+parser.add_argument('--batchsize', default=16, type=int, help='batchsize')
+parser.add_argument('--epochs', default=1, help='training epoch')
 parser.add_argument('--stride', default=2, type=int, help='stride')
-parser.add_argument('--erasing_p', default=0, type=float, help='Random Erasing probability, in [0,1]')
-parser.add_argument('--use_dense', action='store_true', help='use densenet121')
-parser.add_argument('--use_NAS', action='store_true', help='use NAS')
+parser.add_argument('--erasing_p', default=0.5, type=float, help='Random Erasing probability, in [0,1]')
+parser.add_argument('--use_dense', default=False, help='use densenet121')
+parser.add_argument('--use_NAS', default=False, help='use NAS')
 parser.add_argument('--warm_epoch', default=0, type=int, help='the first K epoch that needs warm up')
 parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
 parser.add_argument('--droprate', default=0.5, type=float, help='drop rate')
-parser.add_argument('--PCB', action='store_true', help='use PCB+ResNet50')
-parser.add_argument('--fp16', action='store_true',
+parser.add_argument('--PCB', default=False, help='use PCB+ResNet50')
+parser.add_argument('--fp16', default=False,
                     help='use float16 instead of float32, which will save about 50% memory')
 opt = parser.parse_args()
 
@@ -59,6 +59,7 @@ data_dir = opt.data_dir
 name = opt.name
 str_ids = opt.gpu_ids.split(',')
 gpu_ids = []
+epochs = opt.epochs
 for str_id in str_ids:
     gid = int(str_id)
     if gid >= 0:
@@ -109,7 +110,7 @@ if opt.color_jitter:
     transform_train_list = [transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1,
                                                    hue=0)] + transform_train_list
 
-print(transform_train_list)
+# print(transform_train_list)
 data_transforms = {
     'train': transforms.Compose(transform_train_list),
     'val': transforms.Compose(transform_val_list),
@@ -153,7 +154,7 @@ y_loss = {'train': [], 'val': []}  # loss history
 y_err = {'train': [], 'val': []}
 
 
-def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(model, criterion, optimizer, scheduler, num_epochs):
     since = time.time()
 
     # best_model_wts = model.state_dict()
@@ -168,13 +169,16 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
             if phase == 'train':
-                scheduler.step()
+                # scheduler.step()
                 model.train(True)  # Set model to training mode
             else:
                 model.train(False)  # Set model to evaluate mode
 
             running_loss = 0.0
             running_corrects = 0.0
+
+            prob = tqdm(total=len(dataloaders[phase]))
+
             # Iterate over data.
             for data in dataloaders[phase]:
                 # get the inputs
@@ -239,6 +243,10 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 else:  # for the old version like 0.3.0 and 0.3.1
                     running_loss += loss.data[0] * now_batch_size
                 running_corrects += float(torch.sum(preds == labels.data))
+                prob.update(1)
+
+            prob.close()
+            scheduler.step()
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects / dataset_sizes[phase]
@@ -322,7 +330,7 @@ if opt.PCB:
 
 opt.nclasses = len(class_names)
 
-print(model)
+# print(model)
 
 if not opt.PCB:
     ignored_params = list(map(id, model.classifier.parameters()))
@@ -386,4 +394,4 @@ if fp16:
 criterion = nn.CrossEntropyLoss()
 
 model = train_model(model, criterion, optimizer_ft, exp_lr_scheduler,
-                    num_epochs=60)
+                    num_epochs=epochs)
